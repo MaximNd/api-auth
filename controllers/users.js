@@ -15,42 +15,57 @@ module.exports = {
     async signUp(req, res, next) {
         try {
             const { email, password } = req.value.body;
-            const foundUser = await User.findOne({ email });
+            const foundUser = await User.findOne({ 'local.email': email });
 
             if (foundUser) {
                 return res.status(403).json({ error: 'This Email is already exist!!!!' });
             }
 // 
             const newUser = new User({
-                email,
-                password
+                method: 'local',
+                local: {
+                    email,
+                    password
+                }
             });
 
             await newUser.save();
 
-            const token = signToken(newUser);
+            const access_token = signToken(newUser);
 
             res.status(200).json({
-                token,
+                access_token,
                 user: newUser
             });
         } catch (error) {
             next(error);
         }
     },
+
     async signIn(req, res, next) {
         try {
             const { user } = req;
-            const token = signToken(user);
+            const access_token = signToken(user);
 
             res.status(200).json({
-                token,
+                access_token,
                 user
             });
         } catch (error) {
             next(error);
         }
     },
+
+    async googleOAuth(req, res, next) {
+        const { user } = req;
+        const access_token = signToken(user);
+        
+        res.status(200).json({
+            access_token,
+            user
+        });
+    },
+
     async secret(req, res, next) {
         try {
             console.log('secret');

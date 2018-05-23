@@ -4,6 +4,7 @@ const User = require('./models/user');
 const ExtractJwt = passportJWT.ExtractJwt;
 const JwtStrategy = passportJWT.Strategy;
 const LocalStrategy = require('passport-local').Strategy;
+const GooglePlusTokenStrategy = require('passport-google-plus-token');
 const config = require('./config/config');
 
 
@@ -26,13 +27,39 @@ const jwtStrategy = new JwtStrategy({
     }
 });
 
+// GOOGLE PLUS OAUTH STRATEGY
+const googlePlusStrategy = new GooglePlusTokenStrategy({
+    clientID: config.google.clientID,
+    clientSecret: config.google.clientSecret
+}, async (accessToken, refreshToken, profile, next) => {
+    try {
+        const user = await User.findOne({ 'google.id': profile.id });
+        if (user) {
+            return next(null, user);
+        }
+
+        const newUser = new User({
+            method: 'google',
+            google: {
+                id: profile.id,
+                email: profile.emails[0].value
+            }
+        });
+        console.log(profile.emails[0].value);
+        await newUser.save();
+
+        return next(null, newUser);
+    } catch (error) {
+        next(error, false, error.message);
+    }
+});
 
 // LOCAL STRATEGY
 const localStrategy = new LocalStrategy({
     usernameField: 'email'
 }, async (email, password, next) => {
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ 'local.email': email });
 
         if (!user) {
             return next(null, false);
@@ -42,7 +69,7 @@ const localStrategy = new LocalStrategy({
         if(!isMatch) {
             return next(null, false);
         }
-        
+
         return next(null, user);
     } catch (error) {
         next(error, false);
@@ -53,5 +80,6 @@ const localStrategy = new LocalStrategy({
 
 passport.use(jwtStrategy);
 passport.use(localStrategy);
+passport.use('googleToken', googlePlusStrategy);
 
 module.exports = passport;

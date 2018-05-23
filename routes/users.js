@@ -9,6 +9,9 @@ router.route('/signup')
 router.route('/signin')
     .post(validateBody(schemas.userSignIn), passport.authenticate('local', { session: false }), UsersController.signIn);
 
+router.route('/oauth/google')
+    .post(passport.authenticate('googleToken', { session: false }), UsersController.googleOAuth);
+
 router.route('/secret')
     .get(passport.authenticate('jwt', { session: false }), UsersController.secret);
 
